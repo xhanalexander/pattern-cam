@@ -1,6 +1,8 @@
-# Pattern Cam
+# pattern-cam
 
 Mobile-first Next.js app for live kaleidoscope pattern capture — camera or upload, triangle sample, edit, and PNG export. Inspired by Adobe Capture–style pattern workflows and Catalina Estrada’s print aesthetic.
+
+**Live:** [https://xhanalexander.github.io/pattern-cam/](https://xhanalexander.github.io/pattern-cam/)
 
 ## Getting Started
 
@@ -26,6 +28,8 @@ npm run dev -- --hostname 0.0.0.0 --port 3000 --experimental-https --experimenta
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Development server |
-| `npm run build` | Production build |
+| `npm run build` | Production build (`out/` static export) |
 | `npm start` | Start production server |
 | `npm run lint` | ESLint |
+
+GitHub Pages deploys from `master` via `.github/workflows/pages.yml`.
