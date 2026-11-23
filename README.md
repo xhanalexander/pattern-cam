@@ -19,13 +19,7 @@ npm run dev -- --hostname 0.0.0.0 --port 3000 --experimental-https --experimenta
 
 ## Video references
 
-Design and interaction reference used for this project:
-
-| File | Notes |
-| --- | --- |
-| [`docs/references/catalinaestrada.mp4`](./docs/references/catalinaestrada.mp4) | Demo of live pattern capture → edit → tiled result (Catalina Estrada jaguar/floral print) |
-
-<video src="./docs/references/catalinaestrada.mp4" controls width="360"></video>
+- `catalinaestrada.mp4` — demo of live pattern capture → edit → tiled result (Catalina Estrada jaguar/floral print)
 
 ## Scripts
 
