@@ -1,26 +1,149 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #1a1210;
+  --ink-soft: #2a1c18;
+  --cream: #fff5e8;
+  --tan: #d4a574;
+  --teal: #1fa6a0;
+  --teal-bright: #5ecfc8;
+  --pink: #e8437a;
+  --leaf: #3d8b6e;
+  --background: var(--ink);
+  --foreground: var(--cream);
+  --floral: radial-gradient(
+      circle at 12% 18%,
+      rgba(232, 67, 122, 0.18),
+      transparent 28%
+    ),
+    radial-gradient(circle at 88% 12%, rgba(31, 166, 160, 0.2), transparent 26%),
+    radial-gradient(circle at 70% 78%, rgba(212, 165, 116, 0.16), transparent 32%),
+    radial-gradient(circle at 20% 85%, rgba(61, 139, 110, 0.14), transparent 30%),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 18px,
+      rgba(255, 245, 232, 0.025) 18px,
+      rgba(255, 245, 232, 0.025) 19px
+    );
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+}
+
+input[type="range"] {
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 245, 232, 0.18);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: var(--cream);
+  border: 2px solid var(--teal);
+  cursor: pointer;
+}
+
+/* Custom vertical sliders — zoom above, rotate below */
+.side-slider {
+  position: absolute;
+  right: 0.35rem;
+  z-index: 30;
+  width: 2.5rem;
+  height: 8.25rem;
+  margin: 0;
+  padding: 0;
+  touch-action: none;
+  overscroll-behavior: none;
+  cursor: ns-resize;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.side-slider-zoom {
+  top: 24%;
+}
+
+.side-slider-rotate {
+  top: 48%;
+}
+
+.side-slider-track {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(255, 245, 232, 0.22);
+}
+
+.side-slider.is-active .side-slider-track {
+  background: rgba(255, 245, 232, 0.45);
+}
+
+/* Round thumb — only while touching; size set inline from value */
+.side-slider-thumb {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  pointer-events: none;
+  background: rgba(255, 245, 232, 0.92);
+  border: 1.5px solid rgba(255, 245, 232, 0.95);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.side-slider-snap {
+  position: absolute;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+  border-radius: 1px;
+  background: rgba(255, 245, 232, 0.4);
+  pointer-events: none;
+}
+
+.pressable-btn {
+  transform: scale(1);
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1),
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease;
+  will-change: transform;
+}
+
+.pressable-btn.is-pressed {
+  transform: scale(0.88);
+  opacity: 0.85;
+  background-color: rgba(255, 245, 232, 0.16) !important;
 }
