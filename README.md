@@ -1,4 +1,4 @@
-# Pattern Camera
+# Pattern Cam
 
 Mobile-first Next.js app for live kaleidoscope pattern capture — camera or upload, triangle sample, edit, and PNG export. Inspired by Adobe Capture–style pattern workflows and Catalina Estrada’s print aesthetic.
 
