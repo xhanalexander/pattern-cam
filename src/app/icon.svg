@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="7" fill="#1a1210"/>
+  <g transform="translate(16 16)" stroke="#fff5e8" stroke-width="0.55" stroke-linejoin="round" stroke-linecap="round" fill="none">
+    <!-- outer hexagon -->
+    <path d="M0-11 L9.526-5.5 L9.526 5.5 L0 11 L-9.526 5.5 L-9.526-5.5 Z"/>
+    <!-- spokes to center -->
+    <path d="M0-11 L0 0"/>
+    <path d="M9.526-5.5 L0 0"/>
+    <path d="M9.526 5.5 L0 0"/>
+    <path d="M0 11 L0 0"/>
+    <path d="M-9.526 5.5 L0 0"/>
+    <path d="M-9.526-5.5 L0 0"/>
+    <!-- mid ring (inner hex) -->
+    <path d="M0-5.5 L4.763-2.75 L4.763 2.75 L0 5.5 L-4.763 2.75 L-4.763-2.75 Z"/>
+  </g>
+</svg>
