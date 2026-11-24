@@ -9,7 +9,9 @@ import {
 } from "react";
 import { copy } from "@/lib/i18n";
 import {
+  buildHexTile,
   buildKaleidoscopeTile,
+  buildSquareTile,
   downloadPng,
   fillWithTile,
   naturalSize,
@@ -17,9 +19,12 @@ import {
 } from "@/lib/pattern";
 import VerticalSlider from "@/components/VerticalSlider";
 import PressableButton from "@/components/PressableButton";
-import { vibrateShutter, vibrateTap } from "@/lib/haptics";
+import { vibrateShutter } from "@/lib/haptics";
 
 type Screen = "capture" | "edit";
+type PatternMode = "triangle" | "square" | "hex";
+
+const PATTERN_MODES: PatternMode[] = ["triangle", "square", "hex"];
 
 const TILE_PX = 512;
 
@@ -70,6 +75,8 @@ export default function PatternApp() {
   const [sampleCenter, setSampleCenter] = useState({ x: 0.5, y: 0.5 });
   const [sampleSize, setSampleSize] = useState(0.42);
   const [rotation, setRotation] = useState(0);
+  const [swapSeed, setSwapSeed] = useState(false);
+  const [patternMode, setPatternMode] = useState<PatternMode>("triangle");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -82,6 +89,7 @@ export default function PatternApp() {
   const editPreviewRef = useRef<HTMLCanvasElement>(null);
   const tileRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const rafRef = useRef(0);
   const sampleCenterRef = useRef({ x: 0.5, y: 0.5 });
   const letterboxRef = useRef({ ox: 0, oy: 0, dw: 1, dh: 1 });
@@ -102,7 +110,6 @@ export default function PatternApp() {
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
-    vibrateTap();
     try {
       streamRef.current?.getTracks().forEach((tr) => tr.stop());
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -208,7 +215,12 @@ export default function PatternApp() {
       sizePx,
       rotation,
     );
-    const tile = buildKaleidoscopeTile(sample, TILE_PX);
+    const tile =
+      patternMode === "square"
+        ? buildSquareTile(sample, TILE_PX, swapSeed)
+        : patternMode === "hex"
+          ? buildHexTile(sample, TILE_PX, swapSeed)
+          : buildKaleidoscopeTile(sample, TILE_PX, swapSeed);
     tileRef.current = tile;
 
     const paintLoupe = () => {
@@ -360,6 +372,117 @@ export default function PatternApp() {
     if (dragRef.current?.pointerId === e.pointerId) dragRef.current = null;
   };
 
+  const loupeMask =
+    patternMode === "square"
+      ? swapSeed
+        ? "linear-gradient(to top, transparent 49.6%, rgba(0,0,0,0.55) 50%)"
+        : "linear-gradient(to right, transparent 49.6%, rgba(0,0,0,0.55) 50%)"
+      : patternMode === "hex"
+        ? undefined
+        : swapSeed
+          ? "linear-gradient(to bottom left, transparent 49.6%, rgba(0,0,0,0.55) 50%)"
+          : "linear-gradient(to top right, transparent 49.6%, rgba(0,0,0,0.55) 50%)";
+
+  const loupeOverlay = (
+    <>
+      <canvas ref={loupeRef} className="absolute inset-0 h-full w-full" />
+      {loupeMask && (
+        <div className="absolute inset-0" style={{ background: loupeMask }} />
+      )}
+      {patternMode === "hex" && (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: swapSeed
+              ? "conic-gradient(from 30deg, transparent 0deg 30deg, rgba(0,0,0,0.55) 30deg 360deg)"
+              : "conic-gradient(from 0deg, transparent 0deg 30deg, rgba(0,0,0,0.55) 30deg 360deg)",
+          }}
+        />
+      )}
+      <svg
+        className="absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        {patternMode === "triangle" && (
+          <line
+            x1="0"
+            y1="0"
+            x2="100"
+            y2="100"
+            stroke="white"
+            strokeWidth="1.6"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+        {patternMode === "square" && (
+          <>
+            <line
+              x1="50"
+              y1="0"
+              x2="50"
+              y2="100"
+              stroke="white"
+              strokeWidth="1.6"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="0"
+              y1="50"
+              x2="100"
+              y2="50"
+              stroke="white"
+              strokeWidth="1.6"
+              vectorEffect="non-scaling-stroke"
+            />
+          </>
+        )}
+        {patternMode === "hex" && (
+          <>
+            <polygon
+              points="50,4 93,27 93,73 50,96 7,73 7,27"
+              fill="none"
+              stroke="white"
+              strokeWidth="1.6"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="50"
+              y1="50"
+              x2={swapSeed ? "93" : "50"}
+              y2={swapSeed ? "27" : "4"}
+              stroke="white"
+              strokeWidth="1.2"
+              vectorEffect="non-scaling-stroke"
+            />
+          </>
+        )}
+      </svg>
+      {patternMode === "triangle" && (
+        <>
+          <span className="absolute left-1/2 top-0 h-2.5 w-px -translate-x-1/2 bg-white" />
+          <span className="absolute bottom-0 left-1/2 h-2.5 w-px -translate-x-1/2 bg-white" />
+          <span className="absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
+          <span className="absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
+        </>
+      )}
+    </>
+  );
+
+  const modeLabel =
+    patternMode === "square"
+      ? t.modeSquare
+      : patternMode === "hex"
+        ? t.modeHex
+        : t.modeTriangle;
+
+  const cyclePatternMode = () => {
+    setPatternMode(
+      (m) => PATTERN_MODES[(PATTERN_MODES.indexOf(m) + 1) % PATTERN_MODES.length],
+    );
+  };
+
   return (
     <div className="relative mx-auto h-dvh w-full max-w-md overflow-hidden overscroll-none touch-none bg-[var(--ink)] text-[var(--cream)] max-md:max-w-none">
       <div className="pointer-events-none absolute inset-0 bg-[var(--floral)] opacity-40" aria-hidden />
@@ -382,39 +505,26 @@ export default function PatternApp() {
               </p>
             )}
 
-            {/* Center sample preview (square + triangle) — live + after capture */}
+            {/* Idle: centered hint (shutter + library controls stay at bottom) */}
+            {!hasSource && (
+              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-8 pb-24">
+                <p className="max-w-[16.5rem] text-center text-[0.8125rem] leading-snug text-[var(--cream)]/65">
+                  {t.idleSubtitle}
+                </p>
+              </div>
+            )}
+
+            {/* Center sample preview — tap to swap seed */}
             {hasSource && (
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-                <div className="relative aspect-square w-[min(22%,7.25rem)] overflow-hidden border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
-                  <canvas ref={loupeRef} className="absolute inset-0 h-full w-full" />
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background:
-                        "linear-gradient(to top right, transparent 49.6%, rgba(0,0,0,0.55) 50%)",
-                    }}
-                  />
-                  <svg
-                    className="absolute inset-0 h-full w-full"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-hidden
-                  >
-                    <line
-                      x1="0"
-                      y1="0"
-                      x2="100"
-                      y2="100"
-                      stroke="white"
-                      strokeWidth="1.6"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </svg>
-                  <span className="absolute left-1/2 top-0 h-2.5 w-px -translate-x-1/2 bg-white" />
-                  <span className="absolute bottom-0 left-1/2 h-2.5 w-px -translate-x-1/2 bg-white" />
-                  <span className="absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
-                  <span className="absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
-                </div>
+                <PressableButton
+                  title={t.flip}
+                  aria-label={t.flip}
+                  onPress={() => setSwapSeed((v) => !v)}
+                  className="relative aspect-square w-[min(22%,7.25rem)] overflow-hidden border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+                >
+                  {loupeOverlay}
+                </PressableButton>
               </div>
             )}
 
@@ -447,25 +557,116 @@ export default function PatternApp() {
           {/* One shutter: start camera OR capture */}
           <div className="absolute inset-x-0 bottom-0 z-20 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
             <div className="relative flex items-center justify-center px-6">
-              {!cameraOn && (
-                <label
-                  className="absolute left-6 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/35 bg-black/35 text-sm backdrop-blur-sm"
-                  title={t.upload}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  onUpload(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              {hasSource && (
+                <PressableButton
+                  title={modeLabel}
+                  aria-label={t.modeToggle}
+                  onPress={cyclePatternMode}
+                  className="absolute left-6 flex h-11 w-11 items-center justify-center rounded-full border border-white/35 bg-black/35 text-[var(--cream)] backdrop-blur-sm"
                 >
-                  <span className="sr-only">{t.upload}</span>
-                  ▤
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => onUpload(e.target.files?.[0])}
-                  />
-                </label>
+                  {patternMode === "square" ? (
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      aria-hidden
+                    >
+                      <rect x="5" y="5" width="14" height="14" />
+                      <path d="M12 5v14M5 12h14" />
+                      <path
+                        d="M5 5h7v14H5Z"
+                        fill="currentColor"
+                        fillOpacity="0.35"
+                        stroke="none"
+                      />
+                    </svg>
+                  ) : patternMode === "hex" ? (
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5" />
+                      <path d="M12 12 12 3" />
+                      <path
+                        d="M12 12 20 7.5 12 3Z"
+                        fill="currentColor"
+                        fillOpacity="0.35"
+                        stroke="none"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M5 19V5h14v14H5Z" />
+                      <path d="M5 19 19 5" />
+                      <path
+                        d="M5 19V5l14 14Z"
+                        fill="currentColor"
+                        fillOpacity="0.35"
+                        stroke="none"
+                      />
+                    </svg>
+                  )}
+                </PressableButton>
               )}
 
-              <button
-                type="button"
-                onClick={() => {
+              {!cameraOn && (
+                <PressableButton
+                  title={t.upload}
+                  aria-label={t.upload}
+                  onPress={() => fileInputRef.current?.click()}
+                  className="absolute right-6 flex h-11 w-11 items-center justify-center rounded-full border border-white/35 bg-black/35 text-[var(--cream)] backdrop-blur-sm"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <rect x="7" y="5" width="13" height="13" rx="1.5" />
+                    <path d="M4 9v9.5A1.5 1.5 0 0 0 5.5 20H15" />
+                    <circle cx="11.5" cy="9.5" r="1.1" fill="currentColor" stroke="none" />
+                    <path d="M7 15.5 10.2 12l2.3 2.3 2.2-2.8L20 16.2" />
+                  </svg>
+                </PressableButton>
+              )}
+
+              <PressableButton
+                title={cameraOn || hasSource ? t.capture : t.startCamera}
+                aria-label={cameraOn || hasSource ? t.capture : t.startCamera}
+                onPress={() => {
                   if (!cameraOn && !usingImageRef.current && !frozenRef.current) {
                     void startCamera();
                     return;
@@ -473,10 +674,12 @@ export default function PatternApp() {
                   if (hasSource) onCapture();
                   else void startCamera();
                 }}
-                className="h-[4.25rem] w-[4.25rem] rounded-full border-[3px] border-white/85 bg-transparent transition active:scale-95"
-                aria-label={cameraOn || hasSource ? t.capture : t.startCamera}
-                title={cameraOn || hasSource ? t.capture : t.startCamera}
-              ></button>
+                className="h-[4.25rem] w-[4.25rem] rounded-full border-[3px] border-white/85 bg-transparent"
+              >
+                <span className="sr-only">
+                  {cameraOn || hasSource ? t.capture : t.startCamera}
+                </span>
+              </PressableButton>
             </div>
           </div>
         </>
@@ -498,36 +701,14 @@ export default function PatternApp() {
             />
 
             <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-              <div className="relative aspect-square w-[min(22%,7.25rem)] overflow-hidden border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
-                <canvas ref={loupeRef} className="absolute inset-0 h-full w-full" />
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      "linear-gradient(to top right, transparent 49.6%, rgba(0,0,0,0.55) 50%)",
-                  }}
-                />
-                <svg
-                  className="absolute inset-0 h-full w-full"
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  aria-hidden
-                >
-                  <line
-                    x1="0"
-                    y1="0"
-                    x2="100"
-                    y2="100"
-                    stroke="white"
-                    strokeWidth="1.6"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </svg>
-                <span className="absolute left-1/2 top-0 h-2.5 w-px -translate-x-1/2 bg-white" />
-                <span className="absolute bottom-0 left-1/2 h-2.5 w-px -translate-x-1/2 bg-white" />
-                <span className="absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
-                <span className="absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
-              </div>
+              <PressableButton
+                title={t.flip}
+                aria-label={t.flip}
+                onPress={() => setSwapSeed((v) => !v)}
+                className="relative aspect-square w-[min(22%,7.25rem)] overflow-hidden border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+              >
+                {loupeOverlay}
+              </PressableButton>
             </div>
 
             <VerticalSlider
@@ -555,7 +736,6 @@ export default function PatternApp() {
           {/* Back / Save overlay in front */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 flex items-center justify-between px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
             <PressableButton
-              pressMs={200}
               onPress={() => {
                 frozenRef.current = null;
                 setScreen("capture");
@@ -565,7 +745,6 @@ export default function PatternApp() {
               {t.back}
             </PressableButton>
             <PressableButton
-              pressMs={200}
               onPress={onSave}
               className="rounded-full border border-white/90 bg-black/35 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--cream)] backdrop-blur-sm"
             >

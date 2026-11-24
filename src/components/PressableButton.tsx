@@ -7,57 +7,78 @@ type Props = {
   children: React.ReactNode;
   className?: string;
   onPress: () => void;
-  /** How long to hold the pressed look before firing (ms) */
-  pressMs?: number;
+  title?: string;
+  "aria-label"?: string;
 };
 
 export default function PressableButton({
   children,
   className = "",
   onPress,
-  pressMs = 180,
+  title,
+  "aria-label": ariaLabel,
 }: Props) {
   const [pressed, setPressed] = useState(false);
-  const busyRef = useRef(false);
-  const timerRef = useRef<number | null>(null);
+  const armedRef = useRef(false);
 
-  const clearTimer = () => {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  const runPress = () => {
-    if (busyRef.current) return;
-    busyRef.current = true;
+  const arm = () => {
+    if (armedRef.current) return;
+    armedRef.current = true;
     setPressed(true);
     vibrateTap();
-    clearTimer();
-    timerRef.current = window.setTimeout(() => {
-      setPressed(false);
-      busyRef.current = false;
-      timerRef.current = null;
-      onPress();
-    }, pressMs);
+  };
+
+  const release = (fire: boolean) => {
+    if (!armedRef.current) return;
+    armedRef.current = false;
+    setPressed(false);
+    if (fire) onPress();
   };
 
   return (
     <button
       type="button"
+      title={title}
+      aria-label={ariaLabel}
       className={`pressable-btn pointer-events-auto ${pressed ? "is-pressed" : ""} ${className}`}
       style={{ touchAction: "manipulation" }}
       onPointerDown={(e) => {
+        if (e.button !== 0 && e.pointerType === "mouse") return;
         e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
-        runPress();
+        arm();
+      }}
+      onPointerUp={(e) => {
+        if (!armedRef.current) return;
+        const el = e.currentTarget;
+        const rect = el.getBoundingClientRect();
+        const inside =
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom;
+        if (el.hasPointerCapture(e.pointerId)) {
+          el.releasePointerCapture(e.pointerId);
+        }
+        release(inside);
+      }}
+      onPointerCancel={() => release(false)}
+      onLostPointerCapture={() => {
+        if (armedRef.current) release(false);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          runPress();
+          arm();
         }
       }}
+      onKeyUp={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          release(true);
+        }
+      }}
+      onBlur={() => release(false)}
     >
       {children}
     </button>
