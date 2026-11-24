@@ -340,8 +340,19 @@ export default function PatternApp() {
   };
 
   const onSave = () => {
-    if (!tileRef.current) return;
-    void downloadPng(tileRef.current, `pattern-${Date.now()}.png`);
+    const tile = tileRef.current;
+    if (!tile) return;
+
+    // Full-screen export matching the phone viewport (not the single tile)
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const cssW = window.innerWidth;
+    const cssH = window.innerHeight;
+    const out = document.createElement("canvas");
+    out.width = Math.max(1, Math.round(cssW * dpr));
+    out.height = Math.max(1, Math.round(cssH * dpr));
+    const cell = Math.max(48, Math.floor(Math.min(out.width, out.height) / 4));
+    fillWithTile(out, tile, cell);
+    void downloadPng(out, `pattern-${Date.now()}.png`);
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
