@@ -341,7 +341,7 @@ export default function PatternApp() {
 
   const onSave = () => {
     if (!tileRef.current) return;
-    downloadPng(tileRef.current, `pattern-${Date.now()}.png`);
+    void downloadPng(tileRef.current, `pattern-${Date.now()}.png`);
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {

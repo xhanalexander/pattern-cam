@@ -255,11 +255,50 @@ export function fillWithTile(
   ctx.fillRect(0, 0, target.width, target.height);
 }
 
-export function downloadPng(canvas: HTMLCanvasElement, filename: string): void {
+/** Build a PNG Blob synchronously so share/download stays in the user gesture. */
+function canvasPngBlob(canvas: HTMLCanvasElement): Blob {
+  const dataUrl = canvas.toDataURL("image/png");
+  const marker = ";base64,";
+  const idx = dataUrl.indexOf(marker);
+  const b64 = idx >= 0 ? dataUrl.slice(idx + marker.length) : "";
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: "image/png" });
+}
+
+/** Save PNG — Web Share on mobile (iOS ignores <a download>), else file download. */
+export async function downloadPng(
+  canvas: HTMLCanvasElement,
+  filename: string,
+): Promise<void> {
+  const blob = canvasPngBlob(canvas);
+  const file = new File([blob], filename, { type: "image/png" });
+  const nav = navigator as Navigator & {
+    canShare?: (data?: ShareData) => boolean;
+  };
+
+  if (typeof nav.share === "function") {
+    try {
+      if (!nav.canShare || nav.canShare({ files: [file] })) {
+        await nav.share({ files: [file], title: filename });
+        return;
+      }
+    } catch (err) {
+      // User cancel — stop; other errors fall through to download
+      if (err instanceof DOMException && err.name === "AbortError") return;
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = canvas.toDataURL("image/png");
+  a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
   a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 export function naturalSize(

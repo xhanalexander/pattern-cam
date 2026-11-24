@@ -57,13 +57,15 @@ export default function PressableButton({
           e.clientX <= rect.right &&
           e.clientY >= rect.top &&
           e.clientY <= rect.bottom;
+        // Fire before releasing capture — lostpointercapture would cancel otherwise
+        release(inside);
         if (el.hasPointerCapture(e.pointerId)) {
           el.releasePointerCapture(e.pointerId);
         }
-        release(inside);
       }}
       onPointerCancel={() => release(false)}
       onLostPointerCapture={() => {
+        // Only cancel if still armed (dragged off / interrupted), not after a normal up
         if (armedRef.current) release(false);
       }}
       onKeyDown={(e) => {
